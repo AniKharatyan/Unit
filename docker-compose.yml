@@ -1,0 +1,60 @@
+version: "3.7"
+services:
+    app:
+        build:
+            context: ./
+            dockerfile: Dockerfile
+        image: unit
+        container_name: unit-container
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        networks:
+            - unit
+
+    mysql:
+        image: mysql:8.0
+        container_name: unit-db
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: test-db
+            MYSQL_ROOT_PASSWORD: password
+            MYSQL_PASSWORD: password
+            MYSQL_USERNAME: root
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            - ./docker-compose/mysql:/docker-entrypoint-initdb.d
+        networks:
+            - unit
+        healthcheck:
+            test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+            timeout: 30s
+            retries: 10
+
+    nginx:
+        image: nginx:alpine
+        container_name: unit-nginx
+        restart: unless-stopped
+        ports:
+            - 8000:80
+        volumes:
+            - ./:/var/www
+            - ./docker-compose/nginx:/etc/nginx/conf.d/
+        networks:
+            - unit
+
+    php:
+        image: php:8.2-fpm
+        container_name: unit-php
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        networks:
+            - unit
+
+networks:
+    unit:
+        driver: bridge
